@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const participantsList = document.getElementById("participants-list");
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -26,8 +27,17 @@ document.addEventListener("DOMContentLoaded", () => {
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           <p><strong>Participants:</strong></p>
-          <ul class="participants-list">
-            ${details.participants.map(participant => `<li>${participant}</li>`).join("")}
+          <ul class="participants-list" style="list-style-type: none;">
+            ${details.participants
+              .map(
+                (participant) => `
+                  <li>
+                    ${participant}
+                    <span class="delete-icon" style="cursor: pointer; margin-left: 10px;">❌</span>
+                  </li>
+                `
+              )
+              .join("")}
           </ul>
         `;
 
@@ -38,6 +48,15 @@ document.addEventListener("DOMContentLoaded", () => {
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
+
+        // Add event listeners to delete icons
+        activityCard.querySelectorAll(".delete-icon").forEach((icon, index) => {
+          icon.addEventListener("click", () => {
+            const participant = details.participants[index];
+            unregisterParticipant(name, participant);
+            icon.parentElement.remove();
+          });
+        });
       });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
@@ -85,6 +104,46 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // Function to add a participant to the list
+  function addParticipant(name) {
+    const listItem = document.createElement("li");
+    listItem.textContent = name;
+
+    const deleteIcon = document.createElement("span");
+    deleteIcon.textContent = "❌";
+    deleteIcon.style.cursor = "pointer";
+    deleteIcon.style.marginLeft = "10px";
+
+    deleteIcon.addEventListener("click", () => {
+      unregisterParticipant(name);
+      listItem.remove();
+    });
+
+    listItem.appendChild(deleteIcon);
+    participantsList.appendChild(listItem);
+  }
+
+  // Function to unregister a participant
+  async function unregisterParticipant(activity, participant) {
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activity)}/participants/${encodeURIComponent(participant)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to unregister participant");
+      }
+    } catch (error) {
+      console.error("Error unregistering participant:", error);
+    }
+  }
+
   // Initialize app
   fetchActivities();
+
+  // Example usage: dynamically add participants
+  ["John Doe", "Jane Smith"].forEach(addParticipant);
 });
